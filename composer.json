@@ -1,0 +1,30 @@
+{
+	"name" : "mipotech/yii2-persistent-session",
+	"description" : "A simple class for implementing persistent, server-side sessions (\"server-side cookies\")",
+	"type" : "yii2-extension",
+	"keywords" : [
+		"yii2",
+		"extension"
+	],
+	"license" : "MIT",
+	"authors" : [{
+			"name" : "Chaim Leichman, MIPO Technologies Ltd",
+			"email" : "chaim@mipo.co.il"
+		}
+	],
+	"require" : {
+		"mongodb/mongodb" : "^1.0.0",
+		"yiisoft/yii2" : "*",
+		"yiisoft/yii2-mongodb" : "~2.1.0"
+	},
+	"autoload" : {
+		"psr-4" : {
+			"mipotech\\persistentsession\\" : ""
+		}
+	},
+	"support" : {
+		"email" : "chaim@mipo.co.il",
+		"issues" : "https://github.com/mipotech/yii2-persistent-session/issues",
+		"source" : "https://github.com/mipotech/yii2-persistent-session"
+	}
+}
