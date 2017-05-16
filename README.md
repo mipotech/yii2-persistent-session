@@ -2,30 +2,28 @@
 
 This package provides a simple way to implement persistent sessions, otherwise known as "server-side cookies".
 
-
 ## Installation
+
+This extension requires [MongoDB PHP Extension](http://us1.php.net/manual/en/set.mongodb.php) version 1.0.0 or higher.
+
+This extension requires MongoDB server version 3.0 or higher.
+
 The preferred way to install this extension is through [composer](http://getcomposer.org/download/).
 
-First add this entry to the `repositories` section of your composer.json:
+Either run
 
 ```
-"repositories": [{
-    ...
-},{
-    "type": "git",
-    "url": "https://github.com/mipotech/yii2-persistent-session.git"
-},{
-    ...
-}],
+php composer.phar require --prefer-dist mipotech/yii2-persistent-session
 ```
 
-then add this line:
+or add
 
 ```
-"mipotech/yii2-persistent-session": "dev-master",
+"mipotech/yii2-persistent-session": "~1.0"
 ```
 
-to the `require` section of your `composer.json` file and perform a composer update.
+to the require section of your composer.json.
+
 
 ## Configuration
 
