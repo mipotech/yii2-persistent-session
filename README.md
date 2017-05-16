@@ -1,7 +1,7 @@
-# Yii2-devlogin
+# Yii2 Persistent Session
 
-This package provides a simple way to password-protect an entire site,
-typically when in dev or test mode.
+This package provides a simple way to implement persistent sessions, otherwise known as "server-side cookies".
+
 
 ## Installation
 The preferred way to install this extension is through [composer](http://getcomposer.org/download/).

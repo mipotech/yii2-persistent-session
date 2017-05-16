@@ -1,8 +1,26 @@
 <?php
 namespace mipotech\persistentsession;
 
+use Yii;
+use yii\di\Instance;
+
+/**
+ * @see  https://github.com/yiisoft/yii2-mongodb/blob/master/Session.php
+ */
 class PersistentSession extends \yii\base\Component
 {
+    /**
+     * @var string The application component representing the MongoDB connection
+     */
+    public $db = 'mongodb';
+
+    /**
+     * @var string|array the name of the MongoDB collection that stores the session data.
+     * Please refer to [[Connection::getCollection()]] on how to specify this parameter.
+     * This collection is better to be pre-created with fields 'id' and 'expire' indexed.
+     */
+    public $collection = 'persistent_session';
+
     /**
      * @var array parameter-value pairs to override default session cookie parameters that are used for session_set_cookie_params() function
      * Array may have the following possible keys: 'lifetime', 'path', 'domain', 'secure', 'httponly'
@@ -15,10 +33,12 @@ class PersistentSession extends \yii\base\Component
 
     /**
      * @inheritdoc
+     * @throws InvalidConfigException if [[db]] is invalid.
      */
     public function init()
     {
         parent::init();
+        $this->db = Instance::ensure($this->db, Connection::className());
         if ($this->getIsActive()) {
             // @@@ is this a problem?
         }
