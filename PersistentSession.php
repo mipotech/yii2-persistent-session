@@ -1,13 +1,24 @@
 <?php
+
 namespace mipotech\persistentsession;
 
 use Yii;
 use yii\di\Instance;
+use yii\helpers\ArrayHelper;
+use yii\mongodb\Connection;
 
 /**
+ *
  * @see  https://github.com/yiisoft/yii2-mongodb/blob/master/Session.php
+ * @author Chaim Leichman, MIPO Technologies Ltd
+ *
+ * Here's the current to do list:
+ * @todo Implement \IteratorAggregate
+ * @todo Implement \ArrayAccess
+ * @todo Implement close() function
+ * @todo Implmenet regenerateID() function
  */
-class PersistentSession extends \yii\base\Component
+class PersistentSession extends \yii\base\Component implements \Countable
 {
     /**
      * @var string The application component representing the MongoDB connection
@@ -22,13 +33,39 @@ class PersistentSession extends \yii\base\Component
     public $collection = 'persistent_session';
 
     /**
+     *
+     * @var string The class to use to generate a new cookie using
+     *      Yii::$app->response->cookies->add(...)
+     */
+    public $cookieClass = 'yii\web\Cookie';
+
+    /**
+     *
+     * @var string The cookie key to use for identifying the persistent session
+     */
+    public $cookieKey = 'session-id';
+
+    /**
      * @var array parameter-value pairs to override default session cookie parameters that are used for session_set_cookie_params() function
      * Array may have the following possible keys: 'lifetime', 'path', 'domain', 'secure', 'httponly'
      * @see http://www.php.net/manual/en/function.session-set-cookie-params.php
      */
-    protected $cookieParams = ['httponly' => true, 'secure' => true, 'lifetime' => 3600 * 24 * 365 * 10];
+    public $cookieParams = ['httpOnly' => true, 'secure' => true];
 
-    protected $id;
+    /**
+     *
+     * @link http://php.net/manual/en/function.uniqid.php
+     * @var string The prefix to use for generating a new session identifier
+     */
+    public $uniqidPrefix = '';
+
+    /**
+     *
+     * @var string The session ID
+     *      The session ID is stored in a cookie and used as the primary key
+     *      of the mongodb record
+     */
+    protected static $id;
 
 
     /**
@@ -39,19 +76,6 @@ class PersistentSession extends \yii\base\Component
     {
         parent::init();
         $this->db = Instance::ensure($this->db, Connection::className());
-        if ($this->getIsActive()) {
-            // @@@ is this a problem?
-        }
-    }
-
-    /**
-     * Ends the current session and store session data.
-     */
-    public function close()
-    {
-        if ($this->getIsActive()) {
-            // @@@
-        }
     }
 
     /**
@@ -59,7 +83,7 @@ class PersistentSession extends \yii\base\Component
      * This method is required by [[\Countable]] interface.
      * @return int number of items in the session.
      */
-    public function count()
+    public function count(): int
     {
         return $this->getCount();
     }
@@ -69,9 +93,7 @@ class PersistentSession extends \yii\base\Component
      */
     public function destroy()
     {
-        if ($this->getIsActive()) {
-            // @@@
-        }
+        return $this->deleteRecord();
     }
 
     /**
@@ -81,29 +103,27 @@ class PersistentSession extends \yii\base\Component
      * @param mixed $defaultValue the default value to be returned when the session variable does not exist.
      * @return mixed the session variable value, or $defaultValue if the session variable does not exist.
      */
-    public function get($key, $defaultValue = null)
+    public function get(string $key, $defaultValue = null)
     {
         $this->open();
-        // @@@
-    }
-
-    /**
-     * @return array the session cookie parameters.
-     * @see http://php.net/manual/en/function.session-get-cookie-params.php
-     */
-    public function getCookieParams()
-    {
-        return $this->cookieParams;
+        if ($rec = $this->getRecord()) {
+            return $rec[0][$key] ?? $defaultValue;
+        }
+        return $defaultValue;
     }
 
     /**
      * Returns the number of items in the session.
      * @return int the number of session variables
      */
-    public function getCount()
+    public function getCount(): int
     {
         $this->open();
-        //return count(...);
+        $count = 0;
+        if ($rec = $this->getRecord()) {
+            $count = count($rec[0]) - 1; // don't count the primary key field
+        }
+        return $count;
     }
 
     /**
@@ -113,28 +133,37 @@ class PersistentSession extends \yii\base\Component
      */
     public function getId(): string
     {
-        return $this->id;
+        if (empty(static::$id) && $this->getIsActive()) {
+            static::$id = Yii::$app->request->cookies->get($this->cookieKey);
+        }
+        return static::$id;
     }
 
     /**
+     * Checks if there is an active key for this session
+     *
      * @return bool
      */
     public function getIsActive(): bool
     {
-        // @@@
+        return Yii::$app->request->cookies->has($this->cookieKey) || !empty(static::$id);
     }
 
     /**
      * @param mixed $key session variable name
      * @return bool whether there is the named session variable
      */
-    public function has($key): bool
+    public function has(string $key): bool
     {
         $this->open();
-        //return isset(...[$key]);
+        if ($rec = $this->getRecord()) {
+            return isset($rec[0][$key]);
+        }
+        return false;
     }
 
     /**
+     * Assert that the persistent session cookie exists, and create if not
      *
      */
     public function open()
@@ -143,47 +172,37 @@ class PersistentSession extends \yii\base\Component
             return;
         }
 
-        // @@@ initialize
-    }
-
-    /**
-     * Updates the current session ID with a newly generated one .
-     * Please refer to <http://php.net/session_regenerate_id> for more details.
-     * @param bool $deleteOldSession Whether to delete the old associated session file or not.
-     */
-    public function regenerateID($deleteOldSession = false)
-    {
-        if ($this->getIsActive()) {
-            // @@@
+        $sessionId = uniqid($this->uniqidPrefix, true);  // generate a random 23-character identifier
+        $cookieParams = ArrayHelper::merge(['name' => $this->cookieKey, 'value' => $sessionId], $this->cookieParams);
+        if (!isset($cookieParams['expire'])) {
+            $cookieParams['expire'] = time() + 3600 * 24 * 365 * 5;
         }
+        Yii::$app->response->cookies->add(new $this->cookieClass($cookieParams));
+        $this->setId($sessionId);
     }
 
     /**
      * Removes a session variable.
+     * @link http://www.yiiframework.com/forum/index.php/topic/72072-delete-a-field-of-document-of-mongodb-using-active-record-while-updating-a-document/
      * @param string $key the name of the session variable to be removed
      * @return mixed the removed value, null if no such session variable.
      */
     public function remove(string $key)
     {
         $this->open();
-        /*if (isset(...[$key])) {
-            $value = ...[$key];
-            unset(...[$key]);
-            return $value;
-        } else {
-            return null;
-        }*/
+        $id = $this->getId();
+        return Yii::$app->mongodb->getCollection($this->collection)
+            ->update(['_id' => $id], ['$unset' => [$key => '']]);
     }
 
     /**
-     * Removes all session variables
+     * Removes all session variables from this record
      */
     public function removeAll()
     {
         $this->open();
-        //foreach (array_keys(...) as $key) {
-            //unset(...[$key]);
-        //}
+        $this->deleteRecord();
+        $this->createRecord();
     }
 
     /**
@@ -195,7 +214,11 @@ class PersistentSession extends \yii\base\Component
     public function set(string $key, $value)
     {
         $this->open();
-        // @@@
+        if($record = $this->getRecord()) {
+            return $this->updateRecord([$key => $value]);
+        } else {
+            return $this->createRecord([$key => $value]);
+        }
     }
 
     /**
@@ -206,9 +229,9 @@ class PersistentSession extends \yii\base\Component
      * @throws InvalidParamException if the parameters are incomplete.
      * @see http://us2.php.net/manual/en/function.session-set-cookie-params.php
      */
-    public function setCookieParams(array $value)
+    public function setCookieParams(array $params)
     {
-        $this->cookieParams = $value;
+        $this->cookieParams = ArrayHelper::merge($this->cookieParams, $params);
     }
 
     /**
@@ -218,7 +241,57 @@ class PersistentSession extends \yii\base\Component
      */
     public function setId(string $value)
     {
-        $this->id = $value;
-        // @@@ update cookie
+        static::$id = $value;
+    }
+
+
+    /**
+     * Create a new persistent session record and optionally add new data
+     * at the same time.
+     *
+     * @param array $recordData
+     */
+    protected function createRecord(array $recordData = [])
+    {
+        $this->open();
+        $id = $this->getId();
+        $doc = ArrayHelper::merge(['_id' => $id], $recordData);
+        return $this->db->createCommand()->insert($this->collection, $doc);
+    }
+
+    /**
+     *
+     * @return MongoDB\Driver\WriteResult
+     */
+    protected function deleteRecord()
+    {
+        $this->open();
+        $id = $this->getId();
+        return $this->db->createCommand()->delete($this->collection, ['_id' => $id]);
+    }
+
+    /**
+     *
+     * @return array
+     */
+    protected function getRecord(): array
+    {
+        $this->open();
+        $id = $this->getId();
+        return $this->db->createCommand()->find($this->collection, ['_id' => $id])->toArray();
+    }
+
+    /**
+     *
+     * @link http://www.yiiframework.com/doc-2.0/yii-mongodb-command.html#update()-detail
+     * @param array $recordData
+     * @return \MongoDB\Driver\WriteResult
+     */
+    protected function updateRecord(array $recordData)
+    {
+        $this->open();
+        $id = $this->getId();
+        $condition = ['_id' => $id];
+        return $this->db->createCommand()->update($this->collection, $condition, $recordData);
     }
 }

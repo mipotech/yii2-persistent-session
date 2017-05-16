@@ -62,9 +62,6 @@ if ($persistentSession->isActive) ...
 // open a session
 $persistentSession->open();
 
-// close a session
-$persistentSession->close();
-
 // destroys all data registered to a session.
 $persistentSession->destroy();
 ```
@@ -75,22 +72,15 @@ $persistentSession->destroy();
 ```php
 $persistentSession = Yii::$app->persistentSession;
 
-// get a session variable. The following usages are equivalent:
+// get a session variable.
 $language = $persistentSession->get('language');
-$language = $persistentSession['language'];
 
 // set a session variable. The following usages are equivalent:
 $persistentSession->set('language', 'en-US');
-$persistentSession['language'] = 'en-US';
 
 // remove a session variable. The following usages are equivalent:
 $persistentSession->remove('language');
-unset($persistentSession['language']);
 
 // check if a session variable exists. The following usages are equivalent:
 if ($persistentSession->has('language')) ...
-if (isset($persistentSession['language'])) ...
-
-// traverse all session variables.
-foreach ($persistentSession as $name => $value) ...
 ```
