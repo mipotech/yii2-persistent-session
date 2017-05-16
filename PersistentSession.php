@@ -7,6 +7,8 @@ use yii\di\Instance;
 use yii\helpers\ArrayHelper;
 use yii\mongodb\Connection;
 
+use MongoDB\BSON\UTCDateTime;
+
 /**
  *
  * @see  https://github.com/yiisoft/yii2-mongodb/blob/master/Session.php
@@ -255,7 +257,7 @@ class PersistentSession extends \yii\base\Component implements \Countable
     {
         $this->open();
         $id = $this->getId();
-        $doc = ArrayHelper::merge(['_id' => $id], $recordData);
+        $doc = ArrayHelper::merge(['_id' => $id, 'created' => new UTCDateTime(round(microtime(true) * 1000))], $recordData);
         return $this->db->createCommand()->insert($this->collection, $doc);
     }
 
@@ -292,6 +294,7 @@ class PersistentSession extends \yii\base\Component implements \Countable
         $this->open();
         $id = $this->getId();
         $condition = ['_id' => $id];
+        $recordData['modified'] = new UTCDateTime(round(microtime(true) * 1000));
         return $this->db->createCommand()->update($this->collection, $condition, $recordData);
     }
 }
