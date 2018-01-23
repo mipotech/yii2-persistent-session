@@ -2,28 +2,30 @@
 
 This package provides a simple way to implement persistent sessions, otherwise known as "server-side cookies".
 
+
 ## Installation
-
-This extension requires [MongoDB PHP Extension](http://us1.php.net/manual/en/set.mongodb.php) version 1.0.0 or higher.
-
-This extension requires MongoDB server version 3.0 or higher.
-
 The preferred way to install this extension is through [composer](http://getcomposer.org/download/).
 
-Either run
+First add this entry to the `repositories` section of your composer.json:
 
 ```
-php composer.phar require --prefer-dist mipotech/yii2-persistent-session
+"repositories": [{
+    ...
+},{
+    "type": "git",
+    "url": "https://github.com/mipotech/yii2-persistent-session.git"
+},{
+    ...
+}],
 ```
 
-or add
+then add this line:
 
 ```
-"mipotech/yii2-persistent-session": "~1.0"
+"mipotech/yii2-persistent-session": "dev-master",
 ```
 
-to the require section of your composer.json.
-
+to the `require` section of your `composer.json` file and perform a composer update.
 
 ## Configuration
 
@@ -37,8 +39,13 @@ Add `persistentSession` as an application component in @app/config/web.php:
         'class' => 'mipotech\persistentsession\PersistentSession',
         
         /* Optional settings */
-        //'db' => '...',      // MongoDB application component. Defaults to mongodb
-    ],
+        //'db' => '...',            // MongoDB application component. Defaults to 'mongodb'
+        //'collection' => '...',    // The name of the collection to store the session data. Defaults to 'persistent_session'
+        //'cookieClass' => '...'    // The class to used to generate a new cookie. Defaults to 'yii\web\Cookie'
+        //'cookieKey' => '...',     // The cookie key to use for identifying the persistent session. Defaults to 'session-id'
+        //'cookieParams' => '...',  // The default cookie parameters. Defaults to ['httpOnly' => true, 'secure' => true]
+        //'uniqidPrefix' => '...',  // The prefix to use for generating a new session identifier. Defaults to ''
+    ]
     ...
 ]
 ```
