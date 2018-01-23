@@ -20,7 +20,7 @@ use MongoDB\BSON\UTCDateTime;
  * @todo Implement close() function
  * @todo Implmenet regenerateID() function
  */
-class PersistentSession extends \yii\base\Component implements \Countable
+class PersistentSession extends \yii\base\Component implements \Countable, \ArrayAccess
 {
     /**
      * @var string The application component representing the MongoDB connection
@@ -296,5 +296,41 @@ class PersistentSession extends \yii\base\Component implements \Countable
         $condition = ['_id' => $id];
         $recordData['modified'] = new UTCDateTime(round(microtime(true) * 1000));
         return $this->db->createCommand()->update($this->collection, $condition, $recordData);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function offsetSet($offset, $value)
+    {
+        return $this->set($offset, $value);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function offsetExists($offset)
+    {
+        return $this->has($offset);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function offsetUnset($offset)
+    {
+        $this->open();
+        if ($record = $this->getRecord()) {
+            unset($record[$offset]);
+            return $this->updateRecord($record);
+        }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function offsetGet($offset)
+    {
+        return $this->get($offset);
     }
 }
