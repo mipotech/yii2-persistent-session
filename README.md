@@ -6,23 +6,10 @@ This package provides a simple way to implement persistent sessions, otherwise k
 ## Installation
 The preferred way to install this extension is through [composer](http://getcomposer.org/download/).
 
-First add this entry to the `repositories` section of your composer.json:
+Simply add this line:
 
 ```
-"repositories": [{
-    ...
-},{
-    "type": "git",
-    "url": "https://github.com/mipotech/yii2-persistent-session.git"
-},{
-    ...
-}],
-```
-
-then add this line:
-
-```
-"mipotech/yii2-persistent-session": "dev-master",
+"mipotech/yii2-persistent-session": "*",
 ```
 
 to the `require` section of your `composer.json` file and perform a composer update.
