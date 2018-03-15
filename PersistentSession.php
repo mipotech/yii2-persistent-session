@@ -60,6 +60,12 @@ class PersistentSession extends \yii\base\Component implements \Countable, \Arra
      * @var string The prefix to use for generating a new session identifier
      */
     public $uniqidPrefix = '';
+    
+    /**
+     * @var array The actual record data, saved in this instance as an array
+     *   to avoid unnecessary, expensive calls to MongoDB.
+     */
+    protected $record = [];
 
     /**
      *
@@ -273,14 +279,20 @@ class PersistentSession extends \yii\base\Component implements \Countable, \Arra
     }
 
     /**
-     *
+     * Load the record
+     * 
+     * @param bool $forceReload
      * @return array
      */
-    protected function getRecord(): array
+    protected function getRecord(bool $forceReload = false): array
     {
-        $this->open();
-        $id = $this->getId();
-        return $this->db->createCommand()->find($this->collection, ['_id' => $id])->toArray();
+        if ($forceReload || empty($this->record)) {
+            $this->open();
+            $id = $this->getId();
+            $this->record = $this->db->createCommand()->find($this->collection, ['_id' => $id])->toArray();
+        }
+
+        return $this->record;
     }
 
     /**
@@ -295,7 +307,11 @@ class PersistentSession extends \yii\base\Component implements \Countable, \Arra
         $id = $this->getId();
         $condition = ['_id' => $id];
         $recordData['modified'] = new UTCDateTime(round(microtime(true) * 1000));
-        return $this->db->createCommand()->update($this->collection, $condition, $recordData);
+        if ($ret = $this->db->createCommand()->update($this->collection, $condition, $recordData)) {
+            $this->getRecord(true);     // do a forced reload of the record from MongoDB if it was modified
+        }
+
+        return $ret;
     }
 
     /**
