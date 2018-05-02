@@ -115,7 +115,7 @@ class PersistentSession extends \yii\base\Component implements \Countable, \Arra
     {
         $this->open();
         if ($rec = $this->getRecord()) {
-            return $rec[0][$key] ?? $defaultValue;
+            return $rec[$key] ?? $defaultValue;
         }
         return $defaultValue;
     }
@@ -129,7 +129,7 @@ class PersistentSession extends \yii\base\Component implements \Countable, \Arra
         $this->open();
         $count = 0;
         if ($rec = $this->getRecord()) {
-            $count = count($rec[0]) - 1; // don't count the primary key field
+            $count = count($rec) - 1; // don't count the primary key field
         }
         return $count;
     }
@@ -165,7 +165,7 @@ class PersistentSession extends \yii\base\Component implements \Countable, \Arra
     {
         $this->open();
         if ($rec = $this->getRecord()) {
-            return isset($rec[0][$key]);
+            return isset($rec[$key]);
         }
         return false;
     }
@@ -289,7 +289,10 @@ class PersistentSession extends \yii\base\Component implements \Countable, \Arra
         if ($forceReload || empty($this->record)) {
             $this->open();
             $id = $this->getId();
-            $this->record = $this->db->createCommand()->find($this->collection, ['_id' => $id])->toArray();
+            $cursor = $this->db->createCommand()->find($this->collection, ['_id' => $id])->toArray();
+            if (!empty($cursor)) {
+                $this->record = $cursor[0];
+            }
         }
 
         return $this->record;
